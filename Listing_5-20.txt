@@ -1,0 +1,10 @@
+module TopLevel (SW, KEY, LEDR);
+ input [1:0] SW;
+ input [1:0] KEY;
+ output [1:0] LEDR;
+ reg q; 
+ assign LEDR[0] = SW[0];
+ assign LEDR[1] = q;
+ always @ (negedge(KEY[0]))
+  q <= SW[0]; // "Clock in" data bit
+endmodule

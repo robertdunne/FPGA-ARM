@@ -1,0 +1,14 @@
+module TopLevel (KEY, LEDR);
+ input [1:0] KEY;
+ output [3:0] LEDR;
+ reg q, qBar; 
+ assign LEDR[0] = q;
+ assign LEDR[1] = qBar;
+ assign LEDR[2] = KEY[0];
+ assign LEDR[3] = KEY[1];
+ always @ (*)
+  begin
+   q = ~(KEY[0] & qBar);
+   qBar = ~(KEY[1] & q);
+  end
+endmodule

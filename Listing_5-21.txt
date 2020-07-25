@@ -1,0 +1,16 @@
+module TopLevel (SW, KEY, LEDR);
+ input [1:0] SW;
+ input [1:0] KEY;
+ output [1:0] LEDR;
+ wire A,C; 
+ reg B,D; 
+ assign A = SW[0];
+ assign C = SW[1];
+ assign LEDR[0] = B;
+ assign LEDR[1] = D;
+ always @ (posedge(~KEY[0]))
+  begin
+   B <= B ^ A; // XOR
+   D <= B | C; // OR
+  end
+endmodule

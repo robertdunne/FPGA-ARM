@@ -1,0 +1,11 @@
+module TopLevel (SW, LEDR);
+ input [9:0] SW;
+ output [9:0] LEDR;
+ genvar i;
+ generate
+  for (i=0; i<=3; i=i+1)
+   begin:blkname
+    assign LEDR[0] = SW[5:4]==i ? SW[i] : 1'bz;
+   end
+ endgenerate
+endmodule

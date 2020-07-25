@@ -1,0 +1,59 @@
+module TopLevel (SW, KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4);
+ input  [9:0] SW;
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4;
+  function automatic [7:0] digit;
+   input [3:0] num; 
+   case (num)
+     0:  digit = 8'b11000000;  // 0
+     1:  digit = 8'b11111001;  // 1
+     2:  digit = 8'b10100100;  // 2
+     3:  digit = 8'b10110000;  // 3
+     4:  digit = 8'b10011001;  // 4
+     5:  digit = 8'b10010010;  // 5
+     6:  digit = 8'b10000010;  // 6
+     7:  digit = 8'b11111000;  // 7
+     8:  digit = 8'b10000000;  // 8
+     9:  digit = 8'b10010000;  // 9
+     10: digit = 8'b10001000;  // A
+     11: digit = 8'b10000011;  // b
+     12: digit = 8'b11000110;  // C
+     13: digit = 8'b10100001;  // d
+     14: digit = 8'b10000110;  // E
+     15: digit = 8'b10001110;  // F
+   endcase
+  endfunction
+ assign HEX0 = digit(LEDR[3:0]); // Result
+ assign HEX1 = digit(LEDR[5:4]);
+ assign HEX2 = digit(SW[3:0]); // Operand
+ assign HEX3 = digit(SW[5:4]);
+ assign HEX4 = digit(SW[9:6]); // Op code
+ wire w0,w1;
+ nand(w0,KEY[0],w1); // Set up RS FF latch
+ nand(w1,KEY[1],w0); // as debounced clock.
+ DataProcIns (SW[9:6], SW[5:0], w0, LEDR[5:0]);
+endmodule
+
+// Data Processing Instructions  
+module DataProcIns (opcode, op2, clk, display);
+ input [3:0] opcode;
+ input  [5:0] op2;
+ input  clk;
+ output [5:0] display;
+ reg [5:0] R;
+ assign display = R;
+ always @ (posedge(clk))
+  case (opcode)
+   4'h0:  R <= R & op2;  // AND
+   4'h1:  R <= R ^ op2;  // EOR (exclusive OR)
+   4'h2:  R <= R - op2;  // SUB
+   4'h3:  R <= op2 - R;  // RSB (reverse subtract)
+   4'h4:  R <= R + op2;  // ADD
+   4'hC: R <= R | op2;   // ORR (inclusive OR)
+   4'hD: R <= op2;       // MOV
+   4'hE: R <= R & ~op2;  // BIC (bit clear)
+   4'hF: R <= ~op2;      // MVN (move "negative")
+   default: R <= 0;      // None of above
+  endcase
+endmodule

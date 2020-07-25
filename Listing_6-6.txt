@@ -1,0 +1,13 @@
+module TopLevel (SW, LEDR);
+ input [9:0] SW;
+ output [9:0] LEDR;
+ reg bus_signal;
+ assign LEDR[0] = bus_signal;
+ always @ (*)
+  case (SW[5:4])
+   0:  bus_signal = SW[0];
+   1:  bus_signal = SW[1];
+   2:  bus_signal = SW[2];
+   3:  bus_signal = SW[3];
+ endcase
+endmodule

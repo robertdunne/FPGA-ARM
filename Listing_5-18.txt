@@ -1,0 +1,11 @@
+module TopLevel (KEY, LEDR);
+ input [1:0] KEY;
+ output [3:0] LEDR;
+ wire q, qbar; 
+ buf (LEDR[0], q);
+ buf (LEDR[1], qbar);
+ buf (LEDR[2], KEY[0]); // Set
+ buf (LEDR[3], KEY[1]); // Reset
+ nand (q, KEY[0], qbar);
+ nand (qbar, KEY[1], q);
+endmodule

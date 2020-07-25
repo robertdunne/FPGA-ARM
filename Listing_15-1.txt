@@ -1,0 +1,176 @@
+// Listing 15.1 introduces assembly of branch instructions
+//   1) Assembles 32-bit ARM branch instructions
+//   2) Dumps 32-bit words from program memory in hexadecimal
+//
+// Modules and macros contained in this file:
+//   1) CPU_UI: User Interface that dumps 16 bits of word at a time
+//   2) Macros for only assembling B, BL, and BX instructions
+//   3) ProgMod: Memory containing "ARM" program
+
+//
+//---------------- User Interface ----------------
+//
+module CPU_UI (SW, KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5);
+ input  [6:0] SW;
+ input  [1:0] KEY;
+ output [6:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
+ function automatic [7:0] digit;
+  input [3:0] num; 
+  case (num)
+   0:  digit = 8'b11000000;  // 0
+   1:  digit = 8'b11111001;  // 1
+   2:  digit = 8'b10100100;  // 2
+   3:  digit = 8'b10110000;  // 3
+   4:  digit = 8'b10011001;  // 4
+   5:  digit = 8'b10010010;  // 5
+   6:  digit = 8'b10000010;  // 6
+   7:  digit = 8'b11111000;  // 7
+   8:  digit = 8'b10000000;  // 8
+   9:  digit = 8'b10010000;  // 9
+   10: digit = 8'b10001000;  // A
+   11: digit = 8'b10000011;  // b
+   12: digit = 8'b11000110;  // C
+   13: digit = 8'b10100001;  // d
+   14: digit = 8'b10000110;  // E
+   15: digit = 8'b10001110;  // F
+  endcase
+ endfunction
+ wire [31:0] IR;
+ assign HEX0 = KEY[1] ? digit(IR[19:16]) : digit(IR[3:0]);
+ assign HEX1 = KEY[1] ? digit(IR[23:20]) : digit(IR[7:4]);
+ assign HEX2 = KEY[1] ? digit(IR[27:24]) : digit(IR[11:8]);
+ assign HEX3 = KEY[1] ? digit(IR[31:28]) : digit(IR[15:12]);
+ assign HEX4 = 8'hFF;
+ assign HEX5 = 8'hFF;
+ assign LEDR = SW;
+ ProgMod (SW[6:0], ~KEY[1], ~KEY[0], IR);
+endmodule
+
+//
+//---------------- Macro definitions for assembly language ----------------
+//
+ `define _1   ,0,0,0,0,0,0,0);  // End instruction of 1 field
+ `define _2   ,0,0,0,0,0,0);    // End instruction of 2 fields
+ `define _3   ,0,0,0,0,0);      // End instruction of 3 fields
+ `define _4   ,0,0,0,0);        // End instruction of 4 fields
+ `define _5   ,0,0,0);          // End instruction of 5 fields
+ `define _6   ,0,0);            // End instruction of 6 fields
+ `define _7   ,0);              // End instruction of 7 fields
+ `define _8   );                // End instruction of 8 fields
+
+ `define B     asbr (4'b1010, // Branch
+ `define BL    asbr (4'b1011, // Branch with Link
+ `define BX    asbr (4'b0001, // Branch and Exchange
+ 
+ `define EQ 4'b0000, // EQual (zero); Z set
+ `define NE 4'b0001, // Not Equal (non-zero); Z clear
+ `define HS 4'b0010, // Unsigned Higher or Same; C set -- also "CS"
+ `define CS 4'b0010, // Carry set
+ `define LO 4'b0011, // Unsigned LOwer; C clear --also "CC"
+ `define CC 4'b0011, // Carry clear
+ `define MI 4'b0100, // MInus or negative; N set
+ `define PL 4'b0101, // PLus or positive; N clear
+ `define VS 4'b0110, // Overflow; V Set
+ `define VC 4'b0111, // No overflow; V Clear
+ `define HI 4'b1000, // Unsigned HIgher; C set and Z clear
+ `define LS 4'b1001, // Unsigned Lower or Same; C clear or Z set
+ `define GE 4'b1010, // Signed Greater than or Equal to; N equals V
+ `define LT 4'b1011, // Signed Less Than; N not same as V
+ `define GT 4'b1100, // Signed Greater Than; Z clear and N equals V
+ `define LE 4'b1101, // Signed Less than or Equal; Z set or N not same as V
+ `define AL 4'b1110, // ALways; any status bits OK -- usually omitted
+ `define S  4'b1111, // Status update (code for NeVer, i.e., reserved)
+
+//
+//---------------- Memory containing "ARM" program ----------------
+//
+module ProgMod (adr, clk, reset, instr);
+ input  [6:0] adr;
+ input clk, reset;
+ output [31:0] instr;
+ 
+ parameter R0  = 16'h1000; // General purpose register set names
+ parameter R1  = 16'h1001;
+ parameter R2  = 16'h1002;
+ parameter R3  = 16'h1003;
+ parameter R4  = 16'h1004;
+ parameter R5  = 16'h1005;
+ parameter R6  = 16'h1006;
+ parameter R7  = 16'h1007;
+ parameter R8  = 16'h1008;
+ parameter R9  = 16'h1009;
+ parameter R10 = 16'h100A;
+ parameter R11 = 16'h100B;
+ parameter R12 = 16'h100C;
+ parameter R13 = 16'h100D; // a.k.a. "SP"
+ parameter R14 = 16'h100E; // a.k.a. "LR"
+ parameter R15 = 16'h100F; // a.k.a. "PC"
+
+// ----- Tasks and Functions that implement the "assembler" -----
+
+ integer IP;
+
+// Task asbr is called by branch opcode macros `B, `BL, and `BX
+// The number of parameters will be either two or three.
+ // `B`EQ  TopAdr   `_3 // General format is 3 parameters
+ // `BX    R14      `_2 // Conditional parameter is optional
+
+ task asbr ();
+  input [15:0] P0,P1,P2,P3,P4,P5,P6,P7;
+  {progMem[IP+3],progMem[IP+2],progMem[IP+1],progMem[IP]} <= asbr1(P0,P1,P2);
+  IP = IP + 4;
+ endtask
+
+// Function asbr1 is called by task asbr to construct the condition fields.
+ // `BL      Format 1: Always branch (no status change possible)
+ // `BL`EQ   Format 2: Branch only if Z-flag set
+
+ function [31:0] asbr1 ();
+  input [15:0] P0,P1,P2;
+  if (P2 == 0)  // Format 1
+   asbr1 = 'hE<<28 | asbr2(P0,P1);
+  else
+   asbr1 = P1<<28 | asbr2(P0,P2);
+ endfunction
+
+// Function asbr2 fills the branch's register or address field.
+
+ function [31:0] asbr2 ();
+  input [15:0] Q0, Q1;
+  integer IPoff;
+  IPoff = Q1 - IP - 8;
+  if (Q0 == 1)  // BX
+   asbr2 = {24'h12FFF1, Q1[3:0]};
+  else  // B or BL
+   asbr2 = {Q0, IPoff[25:2]};
+ endfunction
+
+ reg [7:0] progMem[0:99];  // 4 bytes per instruction
+ reg [31:0] IR;            // Instruction Register
+ assign instr = IR;
+ 
+ integer Lab1, Sub1, Sub2;
+ always @ (posedge(clk))
+  IR <= {progMem[adr+3],progMem[adr+2],progMem[adr+1],progMem[adr]};
+ always @ (posedge(reset))
+ begin
+  IP = 0;
+
+  `BX`GT    R4        `_3 // 0:  C12FFF14
+Lab1 = IP;
+  `BX       R5        `_2 // 4:  E12FFF15
+  `B`EQ     Lab1      `_3 // 8:  0AFFFFFD
+  `BL       Sub1      `_2 // C:  EB000001
+  `BL`EQ    Sub1      `_3 // 10: 0B000000
+  `BX       R14       `_2 // 14: E12FFF1E
+Sub1 = IP;
+  `BL       Sub1      `_2 // 18: EBFFFFFE
+  `BL`EQ    Sub2      `_3 // 1C: 0B000000
+  `BX       R14       `_2 // 20: E12FFF1E
+Sub2 = IP;
+  `BX       R0        `_2 // 24: E12FFF10
+
+  progMem[99] <= 0;
+ end
+endmodule 

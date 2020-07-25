@@ -1,0 +1,88 @@
+module CPU_UI (SW, KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5);
+ input  [9:0] SW;
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
+ function automatic [7:0] digit;
+  input [3:0] num; 
+  case (num)
+   0:  digit = 8'b11000000;  // 0
+   1:  digit = 8'b11111001;  // 1
+   2:  digit = 8'b10100100;  // 2
+   3:  digit = 8'b10110000;  // 3
+   4:  digit = 8'b10011001;  // 4
+   5:  digit = 8'b10010010;  // 5
+   6:  digit = 8'b10000010;  // 6
+   7:  digit = 8'b11111000;  // 7
+   8:  digit = 8'b10000000;  // 8
+   9:  digit = 8'b10010000;  // 9
+   10: digit = 8'b10001000;  // A
+   11: digit = 8'b10000011;  // b
+   12: digit = 8'b11000110;  // C
+   13: digit = 8'b10100001;  // d
+   14: digit = 8'b10000110;  // E
+   15: digit = 8'b10001110;  // F
+  endcase
+ endfunction
+ wire [20:0] IR;
+ assign HEX0 = digit(IR[3:0]);   // Rm or constant
+ assign HEX1 = digit(IR[7:4]);
+ assign HEX2 = digit(IR[11:8]);  // Rd
+ assign HEX3 = digit(IR[15:12]);
+ assign HEX4 = digit(IR[19:16]); // Rn
+ assign HEX5 = digit(IR[20]); // Immediate flag
+ assign LEDR = SW;
+ ProgMod (SW[7:0], ~KEY[1], ~KEY[0], IR);
+endmodule
+
+ `define AND asdp (4'd0,  // [Rd] = [Rn] AND (2nd operand)
+ `define EOR asdp (4'd1,  // [Rd] = [Rn] Exclusive Or (2nd operand)
+ `define SUB asdp (4'd2,  // [Rd] = [Rn] - (2nd operand)
+ `define RSB asdp (4'd3,  // [Rd] = (2nd operand) - [Rn]
+ `define ADD asdp (4'd4,  // [Rd] = [Rn] + (2nd operand)
+ `define ORR asdp (4'd12, // [Rd] = [Rn] Inclusive OR (2nd operand)
+ `define MOV asdp (4'd13, // [Rd] = [Rn]
+ `define BIC asdp (4'd14, // [Rd] = [Rn] AND NOT (2nd operand)
+ `define MVN asdp (4'd15, // [Rd] = NOT [Rn]
+ `define _    );            // End of instruction
+  
+module ProgMod (address, clk, reset, instr);
+ input  [7:0] address;
+ input clk, reset;
+ output [20:0] instr;
+ parameter R0  = 16'h1000; // General purpose registers
+ parameter R1  = 16'h1001;
+ parameter R2  = 16'h1002;
+ parameter R3  = 16'h1003;
+ parameter R4  = 16'h1004;
+ parameter R5  = 16'h1005;
+ parameter R6  = 16'h1006;
+ parameter R7  = 16'h1007;
+ parameter R8  = 16'h1008;
+ parameter R9  = 16'h1009;
+ parameter R10 = 16'h100A;
+ parameter R11 = 16'h100B;
+ parameter R12 = 16'h100C;
+ parameter R13 = 16'h100D; // a.k.a. "SP"
+ parameter R14 = 16'h100E; // a.k.a. "LR"
+ parameter R15 = 16'h100F; // a.k.a. "PC"
+
+ function [20:0] asdp ();
+  input [15:0] opcode,Rd,Rn,Rm;
+  if (Rm < 'h1000)
+   asdp = {1'b1,opcode[3:0],Rn[3:0],Rd[3:0],Rm[7:0]};
+  else
+   asdp = {1'b0,opcode[3:0],Rn[3:0],Rd[3:0],Rm[7:0]};
+ endfunction
+ 
+ reg [20:0] progMem[0:255]; // 21 bits per instruction
+ reg [20:0] IR;             // Instruction Register
+ assign instr = IR;
+ always @ (posedge(clk))
+  IR <= progMem[address];
+ always @ (posedge(reset))
+ begin
+  progMem[0] <= `SUB  R5,R6,19   `_ // op2 is a constant
+  progMem[1] <= `SUB  R1,R2,R3   `_ // op2 is in a register
+ end
+endmodule

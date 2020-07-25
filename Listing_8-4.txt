@@ -1,0 +1,92 @@
+module CPU_UI (KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4);
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4;
+  function automatic [7:0] digit;
+   input [3:0] num; 
+   case (num)
+     0:  digit = 8'b11000000;  // 0
+     1:  digit = 8'b11111001;  // 1
+     2:  digit = 8'b10100100;  // 2
+     3:  digit = 8'b10110000;  // 3
+     4:  digit = 8'b10011001;  // 4
+     5:  digit = 8'b10010010;  // 5
+     6:  digit = 8'b10000010;  // 6
+     7:  digit = 8'b11111000;  // 7
+     8:  digit = 8'b10000000;  // 8
+     9:  digit = 8'b10010000;  // 9
+     10: digit = 8'b10001000;  // A
+     11: digit = 8'b10000011;  // b
+     12: digit = 8'b11000110;  // C
+     13: digit = 8'b10100001;  // d
+     14: digit = 8'b10000110;  // E
+     15: digit = 8'b10001110;  // F
+   endcase
+  endfunction
+ wire clk,w1,reset;
+ nand(clk,KEY[0],w1); // Set up RS FF latch
+ nand(w1,KEY[1],clk); // as debounced clock.
+ and(reset,~KEY[0],~KEY[1]); // Reset if both keys pushed
+ reg [1:0] CPU_state;
+ parameter fetch   = 2'b01;
+ parameter decode  = 2'b10;
+ parameter execute = 2'b11;
+ assign LEDR[9:8] = CPU_state;
+ reg [11:0] IR; // Instruction register
+ reg [11:0] progMem [0:63]; // Program memory
+ reg [5:0] PC;  // Program Counter
+ assign LEDR[5:0] = PC; // (a.k.a., Instruction Pointer)
+ reg [3:0] opCode; // Operation code
+ reg [7:0] op2; // Operand data
+ reg [7:0] R; // Accumulator register
+ assign HEX0 = digit(R[3:0]); // Display accumulator
+ assign HEX1 = digit(R[7:4]);
+ assign HEX2 = digit(op2[3:0]); // Operand
+ assign HEX3 = digit(op2[7:4]);
+ assign HEX4 = digit(opCode); // Op code
+ always @ (posedge(clk), posedge(reset))
+  begin
+   if (reset)
+    begin
+     progMem [0] <= 12'hD11; // MOV 17
+     progMem [1] <= 12'h40C; // ADD 12
+     progMem [2] <= 12'h332; // RSB from 50
+     progMem [3] <= 12'h404; // ADD 4
+     progMem [4] <= 12'h0F8; // AND 8'b11111000
+     progMem [5] <= 12'h400; // ADD 0
+     PC <= 0;
+     CPU_state <= fetch;
+    end
+   else
+    case (CPU_state)
+     fetch:   // Get next instruction in program
+      begin
+       IR <= progMem[PC]; // Load next instruction
+       PC <= PC + 1;
+       CPU_state <= decode;
+      end
+     decode:  // Disassemble the instruction 
+      begin
+       opCode <= IR[11:8]; // Opcode is in upper 4 bits
+       op2 <= IR[7:0]; // Operand is in lower 8 bits
+       CPU_state <= execute;
+      end
+     execute: // Perform desired operation
+      begin
+       case (opCode)
+        0:  R <= R & op2;  // AND
+        1:  R <= R ^ op2;  // EOR (exclusive OR)
+        2:  R <= R - op2;  // SUB
+        3:  R <= op2 - R;  // RSB (reverse subtract)
+        4:  R <= R + op2;  // ADD
+        12: R <= R | op2;  // ORR (inclusive OR)
+        13: R <= op2;      // MOV
+        14: R <= R & ~op2; // BIC (bit clear)
+        15: R <= ~op2;     // MVN (move NOT)
+        default: R <= 0;   // None of above
+       endcase
+       CPU_state <= fetch;
+      end
+    endcase
+  end
+endmodule

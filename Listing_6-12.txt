@@ -1,0 +1,18 @@
+module TopLevel (SW, KEY, LEDR);
+ input [7:0] SW;
+ input [1:0] KEY;
+ output [7:0] LEDR;
+ reg [7:0] CS;
+ assign LEDR = CS;
+ always @ (*)
+  case (SW[2:0])
+   0: CS[0] = ~KEY[0];
+   1: CS[1] = ~KEY[0];
+   2: CS[2] = ~KEY[0];
+   3: CS[3] = ~KEY[0];
+   4: CS[4] = ~KEY[0];
+   5: CS[5] = ~KEY[0];
+   6: CS[6] = ~KEY[0];
+   7: CS[7] = ~KEY[0];
+  endcase
+endmodule

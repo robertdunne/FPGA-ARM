@@ -1,0 +1,12 @@
+module TopLevel (SW, KEY, LEDR);
+ input [7:0] SW;
+ input [1:0] KEY;
+ output [3:0] LEDR;
+ wire [3:0] A,B; 
+ reg [3:0] C; 
+ assign A = SW[3:0];
+ assign B = SW[7:4];
+ assign LEDR[3:0] = C;
+ always @ (posedge(~KEY[0]))
+   C <= A & B; // Logical AND to 4-bit register
+endmodule

@@ -1,0 +1,52 @@
+module CPU_UI (SW, KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5);
+ input  [9:0] SW;
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
+ function automatic [7:0] digit;
+  input [3:0] num; 
+  case (num)
+   0:  digit = 8'b11000000;  // 0
+   1:  digit = 8'b11111001;  // 1
+   2:  digit = 8'b10100100;  // 2
+   3:  digit = 8'b10110000;  // 3
+   4:  digit = 8'b10011001;  // 4
+   5:  digit = 8'b10010010;  // 5
+   6:  digit = 8'b10000010;  // 6
+   7:  digit = 8'b11111000;  // 7
+   8:  digit = 8'b10000000;  // 8
+   9:  digit = 8'b10010000;  // 9
+   10: digit = 8'b10001000;  // A
+   11: digit = 8'b10000011;  // b
+   12: digit = 8'b11000110;  // C
+   13: digit = 8'b10100001;  // d
+   14: digit = 8'b10000110;  // E
+   15: digit = 8'b10001110;  // F
+  endcase
+ endfunction
+ wire [20:0] IR;
+ assign HEX0 = digit(IR[3:0]);   // Rm or constant
+ assign HEX1 = digit(IR[7:4]);
+ assign HEX2 = digit(IR[11:8]);  // Rd
+ assign HEX3 = digit(IR[15:12]); // Rn
+ assign HEX4 = digit(IR[19:16]); // OpCode
+ assign HEX5 = digit(IR[20]);    // Immediate flag
+ assign LEDR = SW;
+ ProgMod (SW[7:0], ~KEY[0], ~KEY[1], IR);
+endmodule
+
+module ProgMod (address, reset, clk, instr);
+ input  [7:0] address;
+ input reset, clk;
+ output [20:0] instr;
+ reg [20:0] progMem[0:255]; // 21 bits per instruction
+ reg [20:0] IR;             // Instruction Register
+ assign instr = IR;
+ always @ (posedge(clk))
+  IR <= progMem[address];
+ always @ (posedge(reset))
+ begin
+  progMem[0] <= 21'h126513;  // SUB  R5,R6,19  @ op2 is a constant
+  progMem[1] <= 21'h022103;  // SUB  R1,R2,R3  @ op2 is in a register
+ end
+endmodule

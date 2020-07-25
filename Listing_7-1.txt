@@ -1,0 +1,33 @@
+module TopLevel (SW, KEY, LEDR);
+ input  [9:0] SW;
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ wire w0,w1;
+ nand(w0,KEY[0],w1); // Set up RS FF latch
+ nand(w1,KEY[1],w0); // as debounced clock.
+ DataProcIns (SW[9:6], SW[5:0], w0, LEDR[5:0]);
+endmodule
+
+// Data Processing Instructions  
+module DataProcIns (opcode, op2, clk, display);
+ input [3:0] opcode;
+ input  [5:0] op2;
+ input  clk;
+ output [5:0] display;
+ reg [5:0] R;
+ assign display = R;
+ always @ (posedge(clk))
+  case (opcode)
+   0:  R <= R & op2;  // AND
+   1:  R <= R ^ op2;  // EOR (exclusive OR)
+   2:  R <= R - op2;  // SUB
+   3:  R <= op2 - R;  // RSB (reverse subtract)
+   4:  R <= R + op2;  // ADD
+   12: R <= R | op2;  // ORR (inclusive OR)
+   13: R <= op2;      // MOV
+   14: R <= R & ~op2; // BIC (bit clear)
+   15: R <= ~op2;     // MVN (move "negative")
+   default: R <= 0;   // None of above
+  endcase
+endmodule
+

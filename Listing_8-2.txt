@@ -1,0 +1,38 @@
+module CPU_UI (KEY, LEDR);
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ wire clk,w1,reset;
+ nand(clk,KEY[0],w1); // Set up RS FF latch
+ nand(w1,KEY[1],clk); // as debounced clock.
+ and(reset,~KEY[0],~KEY[1]); // Reset if both keys pushed
+ reg [1:0] CPU_state;
+ parameter fetch   = 2'b01;
+ parameter decode  = 2'b10;
+ parameter execute = 2'b11;
+ assign LEDR[9:8] = CPU_state;
+ reg [11:0] IR; // Instruction register
+ reg [11:0] progMem [0:63]; // Program memory
+ reg [5:0] PC;  // Program Counter
+ assign LEDR[5:0] = PC; // (a.k.a., Instruction Pointer)
+ always @ (posedge(clk), posedge(reset))
+  begin
+   if (reset)
+    begin
+     PC <= 0;
+     CPU_state <= fetch;
+    end
+   else
+    case (CPU_state)
+     fetch:   // Get next instruction in program
+      begin
+       IR <= progMem[PC]; // Load next instruction
+       PC <= PC + 1;
+       CPU_state <= decode;
+      end
+     decode:  // Disassemble the instruction 
+      CPU_state <= execute;
+     execute: // Perform desired operation
+      CPU_state <= fetch;
+    endcase
+  end
+endmodule

@@ -1,0 +1,48 @@
+// Switches 12, 11: Type of shift to be performed
+// Switches 10...8: Number of bit positions to shift
+// Switches 7...0: Original binary data pattern
+// LEDs 7...0: Bit pattern after shift
+
+module TopLevel (SW, LEDR);
+ input  [17:0] SW;
+ output [17:0] LEDR;
+ parameter REGSIZE = 8;   // Size of ARM 32-bit register
+
+ wire [REGSIZE-1:0] RmVal;
+ wire [1:0] shiftType;
+ wire [2:0] shiftCount;
+ wire clk;
+
+ assign shiftType = SW[12:11];
+ assign shiftCount = SW[10:8];
+ assign RmVal = SW[REGSIZE-1:0];
+ ShiftMod (RmVal, shiftType, shiftCount, LEDR[REGSIZE-1:0]);
+endmodule
+
+module ShiftMod (RmVal, shiftType, shiftCount, op2Val);
+ parameter REGSIZE = 8;   // Size of ARM 32-bit register
+
+ parameter LSL = 2'b00;  // Logical Shift Left
+ parameter LSR = 2'b01;  // Logical Shift Right
+ parameter ASR = 2'b10;  // Algebraic Shift Right
+ parameter ROR = 2'b11;  // Rotate (circular) Right
+
+ output [REGSIZE-1:0] op2Val;
+ input [REGSIZE-1:0] RmVal;
+ input [1:0] shiftType;
+ input [2:0] shiftCount;
+ genvar i;
+ generate
+ for (i=0;i<REGSIZE;i=i+1)
+  begin:blkname
+   assign op2Val[i] = (shiftType==LSL) &&
+    (i >= shiftCount) ? RmVal[i-shiftCount] :
+    (shiftType==LSL) ? 0 :
+    (i < REGSIZE-shiftCount) ? RmVal[i+shiftCount] :
+    (shiftType==LSR) ? 0 :
+    (shiftType==ASR) ? RmVal[REGSIZE-1] :
+    RmVal[i+shiftCount-REGSIZE];
+  end
+ endgenerate
+endmodule
+

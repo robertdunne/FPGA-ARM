@@ -1,0 +1,18 @@
+module CPU (SW, LEDR, HEX0, HEX1, HEX2);
+ input  [5:0] SW;
+ output [5:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2;
+ function automatic [7:0] digit;
+  input [1:0] num; 
+  case (num)
+   0:  digit = 8'b11000000;  // 0
+   1:  digit = 8'b11111001;  // 1
+   2:  digit = 8'b10100100;  // 2
+   3:  digit = 8'b10110000;  // 3
+  endcase
+  endfunction
+ assign LEDR = SW;
+ assign HEX0 = digit(SW[1:0]);
+ assign HEX1 = digit(SW[3:2]);
+ assign HEX2 = digit(SW[5:4]);
+endmodule

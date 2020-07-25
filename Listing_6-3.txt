@@ -1,0 +1,9 @@
+module TopLevel (SW, LEDR);
+ input [9:0] SW;
+ output [9:0] LEDR;
+// condition operator = condition ? value-if-true : value-if-false
+ assign LEDR[0] = SW[5:4]==0 ? SW[0] : 1'bz;
+ assign LEDR[0] = SW[5:4]==1 ? SW[1] : 1'bz;
+ assign LEDR[0] = SW[5:4]==2 ? SW[2] : 1'bz;
+ assign LEDR[0] = SW[5:4]==3 ? SW[3] : 1'bz;
+endmodule

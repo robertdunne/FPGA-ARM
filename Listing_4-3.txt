@@ -1,0 +1,19 @@
+module CPU (SW, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5);
+ input  [5:0] SW;
+ output [5:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
+ function automatic [7:0] digit;
+  input num; 
+  begin
+   if (num == 0)  digit = 7'b1000000;  // Display 0
+   else digit = 7'b1111001;  // Display 1
+  end
+ endfunction
+ assign LEDR = SW;
+ assign HEX0 = digit(SW[0]);
+ assign HEX1 = digit(SW[1]);
+ assign HEX2 = digit(SW[2]);
+ assign HEX3 = digit(SW[3]);
+ assign HEX4 = digit(SW[4]);
+ assign HEX5 = digit(SW[5]);
+endmodule

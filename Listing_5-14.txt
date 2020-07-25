@@ -1,0 +1,12 @@
+module TopLevel (SW, LEDR);
+ input [9:0] SW;
+ output [9:0] LEDR;
+ reg sum, carry;
+ assign LEDR[0] = sum;
+ assign LEDR[1] = carry;
+ always @ (SW[0], SW[1], SW[2])
+  begin
+   sum = SW[0] ^ SW[1] ^ SW[2];
+   carry = SW[0] & SW[1] | SW[0] & SW[2] | SW[1] & SW[2];
+  end
+endmodule

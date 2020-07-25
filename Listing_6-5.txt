@@ -1,0 +1,10 @@
+module TopLevel (SW, LEDR);
+ input [9:0] SW;
+ output [9:0] LEDR;
+ reg bus_signal;
+ integer i;
+ assign LEDR[0] = bus_signal;
+ always @ (*)
+  for (i=0; i<=3; i=i+1)
+   if (SW[5:4]==i) bus_signal = SW[i];
+endmodule

@@ -1,0 +1,48 @@
+// Switches 9, 8: Type of shift to be performed
+// Switches 7, 6: Number of bit positions to shift (max of 3)
+// Switches 5...0: Original binary data pattern
+// LEDs 5...0: Bit pattern after shift
+
+module TopLevel (SW, KEY, LEDR);
+ input  [9:0] SW;
+ input  [1:0] KEY;
+ output [9:0] LEDR;
+ parameter REGSIZE = 6;   // Size of ARM 32-bit register
+
+ parameter LSL = 2'b00;  // Logical Shift Left
+ parameter LSR = 2'b01;  // Logical Shift Right
+ parameter ASR = 2'b10;  // Algebraic Shift Right
+ parameter ROR = 2'b11;  // Rotate (circular) Right
+
+ reg [REGSIZE-1:0] op2Val;
+ wire [REGSIZE-1:0] RmVal;
+ wire [1:0] shiftType;
+ wire [1:0] shiftCount;
+ wire clk;
+
+ assign clk = ~KEY[0];
+ assign shiftType = SW[9:8];
+ assign shiftCount = SW[7:6];
+ assign RmVal = SW[REGSIZE-1:0];
+ assign LEDR[REGSIZE-1:0] = op2Val;
+
+ integer i; // Loop counter
+ always @ (posedge(clk))
+ for (i=0;i<REGSIZE;i=i+1)
+  begin
+   if (shiftType==LSL)
+    if (i >= shiftCount)
+     op2Val[i] <= RmVal[i-shiftCount];
+    else
+     op2Val[i] <= 0;
+   else  // The three right shifts (LSR, ASR, ROR)
+    if (i < REGSIZE-shiftCount)
+     op2Val[i] <= RmVal[i+shiftCount];
+    else
+     case (shiftType)
+      LSR: op2Val[i] <= 0;
+      ASR: op2Val[i] <= RmVal[REGSIZE-1];
+      default: op2Val[i] <= RmVal[i+shiftCount-REGSIZE];
+     endcase
+  end
+endmodule

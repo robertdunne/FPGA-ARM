@@ -1,0 +1,187 @@
+// Listing 14.1 introduces assembly of load/store instructions
+//   1) Assembles 32-bit ARM load/store and word/byte instructions
+//   2) Dumps 32-bit words from program memory in hexadecimal
+//
+// Modules and macros contained in this file:
+//   1) CPU_UI: User Interface that dumps 16 bits of word at a time
+//   2) Macros for only assembling ARM LDR/STR/WORD... instructions
+//   3) ProgMod: Memory containing "ARM" program
+
+//
+//---------------- User Interface ----------------
+//
+module CPU_UI (SW, KEY, LEDR, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5);
+ input  [6:0] SW;
+ input  [1:0] KEY;
+ output [6:0] LEDR;
+ output [7:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5;
+ function automatic [7:0] digit;
+  input [3:0] num; 
+  case (num)
+   0:  digit = 8'b11000000;  // 0
+   1:  digit = 8'b11111001;  // 1
+   2:  digit = 8'b10100100;  // 2
+   3:  digit = 8'b10110000;  // 3
+   4:  digit = 8'b10011001;  // 4
+   5:  digit = 8'b10010010;  // 5
+   6:  digit = 8'b10000010;  // 6
+   7:  digit = 8'b11111000;  // 7
+   8:  digit = 8'b10000000;  // 8
+   9:  digit = 8'b10010000;  // 9
+   10: digit = 8'b10001000;  // A
+   11: digit = 8'b10000011;  // b
+   12: digit = 8'b11000110;  // C
+   13: digit = 8'b10100001;  // d
+   14: digit = 8'b10000110;  // E
+   15: digit = 8'b10001110;  // F
+  endcase
+ endfunction
+ wire [31:0] IR;
+ assign HEX0 = KEY[1] ? digit(IR[19:16]) : digit(IR[3:0]);
+ assign HEX1 = KEY[1] ? digit(IR[23:20]) : digit(IR[7:4]);
+ assign HEX2 = KEY[1] ? digit(IR[27:24]) : digit(IR[11:8]);
+ assign HEX3 = KEY[1] ? digit(IR[31:28]) : digit(IR[15:12]);
+ assign HEX4 = 8'hFF;
+ assign HEX5 = 8'hFF;
+ assign LEDR = SW;
+ ProgMod (SW[6:0], ~KEY[1], ~KEY[0], IR);
+endmodule
+
+//
+//---------------- Macro definitions for assembly language ----------------
+//
+ `define _1   ,0,0,0,0,0,0,0);  // End instruction of 1 field
+ `define _2   ,0,0,0,0,0,0);    // End instruction of 2 fields
+ `define _3   ,0,0,0,0,0);      // End instruction of 3 fields
+ `define _4   ,0,0,0,0);        // End instruction of 4 fields
+ `define _5   ,0,0,0);          // End instruction of 5 fields
+ `define _6   ,0,0);            // End instruction of 6 fields
+ `define _7   ,0);              // End instruction of 7 fields
+ `define _8   );                // End instruction of 8 fields
+ `define STR   asmem (3'b000, // Store full 32-bit R register
+ `define STRB  asmem (3'b100, // Store low-order byte in register
+ `define LDR   asmem (3'b001, // Load full 32-bit R register
+ `define LDRB  asmem (3'b101, // Load lower 8 bits and zero fill
+ `define WORD  asdat (4,      // Initialize 32-bit word in memory
+ `define BYTE  asdat (1,      // Initialize 8-bit byte in memory
+ `define ALIGN asdat (0,      // Align IP to multiple of bytes
+ 
+ `define EQ 4'b0000, // EQual (zero); Z set
+ `define NE 4'b0001, // Not Equal (non-zero); Z clear
+ `define HS 4'b0010, // Unsigned Higher or Same; C set -- also "CS"
+ `define CS 4'b0010, // Carry set
+ `define LO 4'b0011, // Unsigned LOwer; C clear --also "CC"
+ `define CC 4'b0011, // Carry clear
+ `define MI 4'b0100, // MInus or negative; N set
+ `define PL 4'b0101, // PLus or positive; N clear
+ `define VS 4'b0110, // Overflow; V Set
+ `define VC 4'b0111, // No overflow; V Clear
+ `define HI 4'b1000, // Unsigned HIgher; C set and Z clear
+ `define LS 4'b1001, // Unsigned Lower or Same; C clear or Z set
+ `define GE 4'b1010, // Signed Greater than or Equal to; N equals V
+ `define LT 4'b1011, // Signed Less Than; N not same as V
+ `define GT 4'b1100, // Signed Greater Than; Z clear and N equals V
+ `define LE 4'b1101, // Signed Less than or Equal; Z set or N not same as V
+ `define AL 4'b1110, // ALways; any status bits OK -- usually omitted
+ `define S  4'b1111, // Status update (code for NeVer, i.e., reserved)
+
+//
+//---------------- Memory containing "ARM" program ----------------
+//
+module ProgMod (adr, clk, reset, instr);
+ input  [6:0] adr;
+ input clk, reset;
+ output [31:0] instr;
+ 
+ parameter R0  = 16'h1000; // General purpose register set names
+ parameter R1  = 16'h1001;
+ parameter R2  = 16'h1002;
+ parameter R3  = 16'h1003;
+ parameter R4  = 16'h1004;
+ parameter R5  = 16'h1005;
+ parameter R6  = 16'h1006;
+ parameter R7  = 16'h1007;
+ parameter R8  = 16'h1008;
+ parameter R9  = 16'h1009;
+ parameter R10 = 16'h100A;
+ parameter R11 = 16'h100B;
+ parameter R12 = 16'h100C;
+ parameter R13 = 16'h100D; // a.k.a. "SP"
+ parameter R14 = 16'h100E; // a.k.a. "LR"
+ parameter R15 = 16'h100F; // a.k.a. "PC"
+
+// ----- Tasks and Functions that implement the "assembler" -----
+
+ integer IP;
+
+// Task asmem is called by load/store opcode macros `LDR, `STR, ...
+// The number of parameters will vary between three and eight.
+ // `LDR`EQ  R1,(R2)   `_4 // General format (for now) is 4 parameters
+ // `LDR     R1,(R2)   `_3 // Conditional parameter is optional
+
+ task asmem ();
+  input [15:0] P0,P1,P2,P3,P4,P5,P6,P7;
+  {progMem[IP+3],progMem[IP+2],progMem[IP+1],progMem[IP]} <= asmem1(P0,P1,P2,P3,P4,P5,P6,P7);
+  IP = IP + 4;
+ endtask
+
+// Function asmem1 is called by task asmem to construct the opcode and condition fields.
+ // `LDR      Format 1: Always load (no status change possible)
+ // `LDR`EQ   Format 2: Load only if Z-flag set
+
+ function [31:0] asmem1 ();
+  input [15:0] P0,P1,P2,P3,P4,P5,P6,P7;
+  if (P1 >= R0)  // Format 1
+   asmem1 = 'hE<<28 | asmem2(P0,P1,P2,P3,P4,P5,P6);
+  else
+   asmem1 = P1<<28 | asmem2(P0,P2,P3,P4,P5,P6,P7);
+ endfunction
+
+// Function asmem2 fills the load/store's register fields.
+
+ function [31:0] asmem2 ();
+  input [15:0] opCode, Rd, Rn, Q3, Q4, Q5, Q6;
+  asmem2 = 1<<26 | opCode<<20 | Rn[3:0]<<16 | Rd[3:0]<<12;
+ endfunction
+
+// Task asdat is called by WORD, BYTE, ALIGN macros
+
+ task asdat ();
+  input [31:0] P0,P1,P2,P3,P4,P5,P6,P7;
+  if (P0==0) // align
+   IP = (IP+P1-1) & ~(P1-1);
+  else
+   if (P0==1) // byte
+    begin
+     progMem[IP] <= P1;
+     IP = IP + 1;
+    end
+   else
+    if (P0==4) // word
+     begin
+      {progMem[IP+3],progMem[IP+2],progMem[IP+1],progMem[IP]} <= P1;
+      IP = IP + 4;
+     end
+ endtask
+ 
+ reg [7:0] progMem[0:99];  // 4 bytes per instruction
+ reg [31:0] IR;            // Instruction Register
+ assign instr = IR;
+ 
+ always @ (posedge(clk))
+  IR <= {progMem[adr+3],progMem[adr+2],progMem[adr+1],progMem[adr]};
+ always @ (posedge(reset))
+ begin
+  IP = 0;
+  `LDR      R4,(R5)  `_3 // 0:  E4154000
+  `LDR`GT   R4,(R5)  `_4 // 4:  C4154000
+  `LDRB     R4,(R5)  `_3 // 8:  E4554000
+  `STR      R1,(R2)  `_3 // C:  E4021000
+  `STRB     R1,(R2)  `_3 // 10: E4421000
+  `BYTE     8'H98    `_2 // 14: 98
+  `BYTE     25       `_2 // 15: 'h19
+  `ALIGN    4        `_2 // Set for word boundary
+  `WORD     'HABCDEF `_2 // 18: 00ABCDEF
+  progMem[99] <= 0;
+ end
+endmodule 

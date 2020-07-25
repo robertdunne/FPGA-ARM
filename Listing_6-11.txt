@@ -1,0 +1,9 @@
+module TopLevel (SW, KEY, LEDR);
+ input [7:0] SW;
+ input [1:0] KEY;
+ output [7:0] LEDR;
+ reg [7:0] CS;
+ assign LEDR = CS;
+ always @ (*)
+  CS[SW[2:0]] = ~KEY[0];
+endmodule
