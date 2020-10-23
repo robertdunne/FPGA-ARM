@@ -9,5 +9,5 @@ module TopLevel (SW, LEDR);
    1:  bus_signal = SW[1];
    2:  bus_signal = SW[2];
    3:  bus_signal = SW[3];
- endcase
+  endcase
 endmodule
