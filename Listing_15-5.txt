@@ -721,7 +721,7 @@ module ProgMod (adr, clk, reset, instr);
    asbr2 = {Q0, IPoff[25:2]};
  endfunction
 
- reg [7:0] progMem[0:99];  // 4 bytes per instruction
+ reg [7:0] progMem[0:149]; // 4 bytes per instruction
  reg [31:0] IR;            // Instruction Register
  assign instr = IR;
  
