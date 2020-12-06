@@ -746,7 +746,7 @@ module ProgMod (adr, clk, reset, instr);
 //            LR: Return address
 //            SP: Stack must have at least 120 bytes available
 //    Output: R2: Calculated value of N. Range = [1, 479001600]
-//            R1: Used as scratch, i.e., not saved
+//            R1,R3: Used as scratch, i.e., not saved
 	
 FactN    =  IP;
    `CMP     R2,1      `_3  // 5: Test for special, 1! = 1
@@ -757,12 +757,12 @@ FactN    =  IP;
    `STR     LR,(SP)   `_3  // A: Save return address
    `SUB     R2,1      `_3  // B: Prepare argument of (N-1)
    `BL      FactN     `_2  // C: Get value of (N-1)! in R2
-   `LDR     LR,(SP)   `_3  // D: Restore the return address
+   `LDR     R3,(SP)   `_3  // D: Restore the return address into R3
    `ADD     SP,4      `_3  // E: Return storage space on stack
    `LDR     R1,(SP)   `_3  // F: Restore input value of N into R1
    `ADD     SP,4      `_3  // 10: Restore SP to input value
    `MUL     R2,R1     `_3  // 11: Calculate: N! = N * (N-1)! into R2
-   `BX      LR        `_2  // 12: Return N! in register R2.
+   `BX      R3        `_2  // 12: Return N! in register R2.
 	
    progMem[149] = 0;
   end
