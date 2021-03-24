@@ -2,7 +2,7 @@ module TopLevel (SW, LEDR);
  input [9:0] SW;
  output [9:0] LEDR;
  wire carry0, carry1, carry2, carry3; // Internal connections for carry
- FullAdder (SW[0], SW[5], '0',  LEDR[0], carry0);
+ FullAdder (SW[0], SW[5], 0,  LEDR[0], carry0);
  FullAdder (SW[1], SW[6], carry0,  LEDR[1], carry1);
  FullAdder (SW[2], SW[7], carry1,  LEDR[2], carry2);
  FullAdder (SW[3], SW[8], carry2,  LEDR[3], carry3);
