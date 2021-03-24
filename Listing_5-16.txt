@@ -13,9 +13,9 @@ module FullAdder (bitA, bitB, bitC, sum, carry);
  input bitA, bitB, bitC;
  output sum, carry;
  wire AB, AC, BC; // Internal connections for carry
- xor SumSig (sum, SW[0], SW[1], SW[2]); // Sum = A ^ B ^ C
- and (AB, SW[0], SW[1]);
- and (AC, SW[0], SW[2]);
- and (BC, SW[1], SW[2]);
+ xor SumSig (sum, bitA, bitB, bitC); // Sum = A ^ B ^ C
+ and (AB, bitA, bitB);
+ and (AC, bitA, bitC);
+ and (BC, bitB, bitC);
  or CarrySig (carry, AB, AC, BC); // Carry = A & B | A & C | B & C
 endmodule
